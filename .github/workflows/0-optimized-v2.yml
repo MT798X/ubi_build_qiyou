@@ -43,10 +43,11 @@ on:
         description: "自选主题"
         required: true
         type: choice
-        default: "aurora"
+        default: "zargon"
         options:
           - "liquid"
           - "aurora"
+          - "zargon"
         
       plugin_scripts:
         description: "自选插件脚本，多个用英文逗号分隔；留空则不执行"
