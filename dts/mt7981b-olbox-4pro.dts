@@ -8,37 +8,35 @@
 #include "mt7981.dtsi"
 
 / {
-	model = "OLBOX-4PRO";
-	compatible = "olbox,4pro", "mediatek,mt7981", "mediatek,mt7981-rfb";
+	model = "OLBOX 4Pro";
+	compatible = "olbox,4pro", "mediatek,mt7981";
 
 	aliases {
+		led-boot = &status_red_led;
+		led-failsafe = &status_red_led;
+		led-running = &status_green_led;
+		led-upgrade = &status_red_led;
 		serial0 = &uart0;
-		label-mac-device = &gmac0;
-		led-boot = &led_status_red;
-		led-failsafe = &led_status_red;
-		led-running = &led_status_blue;
-		led-upgrade = &led_status_blue;
 	};
 
 	chosen {
-
 		stdout-path = "serial0:115200n8";
 	};
 
 	memory {
-		reg = <0 0x40000000 0 0x10000000>;
+		reg = <0 0x40000000 0 0x20000000>;
 	};
 
 	gpio-keys {
 		compatible = "gpio-keys";
 
-		button-reset {
+		reset {
 			label = "reset";
 			linux,code = <KEY_RESTART>;
 			gpios = <&pio 1 GPIO_ACTIVE_LOW>;
 		};
 
-		button-wps {
+		wps {
 			label = "wps";
 			linux,code = <KEY_WPS_BUTTON>;
 			gpios = <&pio 0 GPIO_ACTIVE_LOW>;
@@ -48,28 +46,19 @@
 	gpio-leds {
 		compatible = "gpio-leds";
 
-		/* red   = GPIO13, 原厂 Linux PWM ch0 "wan"     */
-		led_status_red: red {
-			function = LED_FUNCTION_STATUS;
-			color = <LED_COLOR_ID_RED>;
+		status_red_led: led-0 {
+			label = "red:status";
 			gpios = <&pio 13 GPIO_ACTIVE_HIGH>;
-			default-state = "on";
 		};
 
-		/* green = GPIO7,  原厂 Linux PWM ch2 "internet" */
-		led_status_green: green {
-			function = LED_FUNCTION_STATUS;
-			color = <LED_COLOR_ID_GREEN>;
+		status_green_led: led-1 {
+			label = "green:status";
 			gpios = <&pio 7 GPIO_ACTIVE_HIGH>;
-			default-state = "on";
 		};
 
-		/* blue  = GPIO15, 原厂 Linux PWM ch1 "wpsled"   */
-		led_status_blue: blue {
-			function = LED_FUNCTION_STATUS;
-			color = <LED_COLOR_ID_BLUE>;
+		status_blue_led: led-2 {
+			label = "blue:status";
 			gpios = <&pio 15 GPIO_ACTIVE_HIGH>;
-			default-state = "off";
 		};
 	};
 };
@@ -81,9 +70,6 @@
 		compatible = "mediatek,eth-mac";
 		reg = <0>;
 		phy-mode = "2500base-x";
-
-		nvmem-cells = <&macaddr_factory_a002a 0>;
-		nvmem-cell-names = "mac-address";
 
 		fixed-link {
 			speed = <2500>;
@@ -110,19 +96,26 @@
 	pinctrl-0 = <&spi0_flash_pins>;
 	status = "okay";
 
-	spi_nand: flash@0 {
+	spi_nand@0 {
+		compatible = "spi-nand";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "spi-nand";
 		reg = <0>;
-		spi-max-frequency = <52000000>;
 
+		spi-max-frequency = <52000000>;
 		spi-tx-bus-width = <4>;
 		spi-rx-bus-width = <4>;
-		
-                mediatek,nmbm;
-                mediatek,bmt-max-ratio = <1>;
-                mediatek,bmt-max-reserved-blocks = <64>;
+
+		spi-cal-enable;
+		spi-cal-mode = "read-data";
+		spi-cal-datalen = <7>;
+		spi-cal-data = /bits/ 8 <0x53 0x50 0x49 0x4E 0x41 0x4E 0x44>;
+		spi-cal-addrlen = <5>;
+		spi-cal-addr = /bits/ 32 <0x0 0x0 0x0 0x0 0x0>;
+
+		mediatek,nmbm;
+		mediatek,bmt-max-ratio = <1>;
+		mediatek,bmt-max-reserved-blocks = <64>;
 
 		partitions {
 			compatible = "fixed-partitions";
@@ -130,61 +123,31 @@
 			#size-cells = <1>;
 
 			partition@0 {
-				label = "BL2";
-				reg = <0x00000 0x100000>;
+				label = "bl2";
+				reg = <0x0000000 0x0100000>;
 				read-only;
 			};
 
 			partition@100000 {
 				label = "u-boot-env";
-				reg = <0x100000 0x80000>;
+				reg = <0x0100000 0x0080000>;
 			};
 
 			factory: partition@180000 {
 				label = "Factory";
-				reg = <0x180000 0x200000>;
+				reg = <0x0180000 0x0200000>;
 				read-only;
-
-				/* compatible = "nvmem-cells"; */
-				nvmem-layout {
-					compatible = "fixed-layout";
-					#address-cells = <1>;
-					#size-cells = <1>;
-
-					eeprom_factory_0: eeprom@0 {
-						reg = <0x0 0x1000>;
-					};
-
-					macaddr_factory_a002a: macaddr@a002a {
-						compatible = "mac-base";
-						reg = <0xa002a 0x6>;
-						#nvmem-cell-cells = <1>;
-					};
-
-					macaddr_factory_a0024: macaddr@a0024 {
-						compatible = "mac-base";
-						reg = <0xa0024 0x6>;
-						#nvmem-cell-cells = <1>;
-					};
-				};
 			};
 
 			partition@380000 {
 				label = "FIP";
-				reg = <0x380000 0x200000>;
+				reg = <0x0380000 0x0200000>;
 				read-only;
 			};
 
 			partition@580000 {
-                label = "Config";
-                reg = <0x580000 0x100000>;
-            };
-
-			ubi: partition@680000 {
 				label = "ubi";
-				/* 256 MiB 片: NMBM 管理区从 block 1920 (0xf000000) 起,
-				 * 可见容量 240 MiB, 故 ubi 结束地址正好 0xf000000 */
-				reg = <0x0680000 0xe980000>; /* 233.5 MiB = 239104 KiB */
+				reg = <0x0580000 0x7280000>;
 			};
 		};
 	};
@@ -198,9 +161,6 @@
 		port@0 {
 			reg = <0>;
 			label = "wan";
-
-			nvmem-cells = <&macaddr_factory_a0024 0>;
-			nvmem-cell-names = "mac-address";
 		};
 
 		port@1 {
@@ -242,13 +202,13 @@
 		conf-pu {
 			pins = "SPI0_CS", "SPI0_HOLD", "SPI0_WP";
 			drive-strength = <8>;
-			mediatek,pull-up-adv = <0>; /* bias-disable */
+			bias-pull-up = <MTK_PUPD_SET_R1R0_11>;
 		};
 
 		conf-pd {
 			pins = "SPI0_CLK", "SPI0_MOSI", "SPI0_MISO";
 			drive-strength = <8>;
-			mediatek,pull-up-adv = <0>; /* bias-disable */
+			bias-pull-down = <MTK_PUPD_SET_R1R0_11>;
 		};
 	};
 };
@@ -261,17 +221,17 @@
 	status = "okay";
 };
 
-&wifi {
-	status = "okay";
-	nvmem-cells = <&eeprom_factory_0>;
-	nvmem-cell-names = "eeprom";
-	/* mediatek,mtd-eeprom = <&factory 0x0>; */
-};
-
 &usb_phy {
 	status = "okay";
 };
 
 &xhci {
+	mediatek,u3p-dis-msk = <0x0>;
 	status = "okay";
+};
+
+&wifi {
+	status = "okay";
+
+	mediatek,mtd-eeprom = <&factory 0x0>;
 };
