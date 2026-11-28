@@ -547,7 +547,12 @@ jobs:
               echo 'CONFIG_PACKAGE_luci-theme-aurora=y' >> .config
               THEME_SH="$GITHUB_WORKSPACE/theme/diy-aurora.sh"
               ;;
-
+              
+            zargon)
+              echo 'CONFIG_PACKAGE_luci-theme-zargon=y' >> .config
+              THEME_SH="$GITHUB_WORKSPACE/theme/diy-zargon.sh"
+              ;;
+              
             *)
               echo "ERROR: Unknown theme: $THEME_SH"
               exit 1
